@@ -183,17 +183,35 @@ def parse_inf_file(f):
     for line in f.readlines():
         if not line.strip():
             continue
-        key, val = line.split(' = ')
-        val = val.strip()
-        parse_param(key, val)
+        if ' = ' in line:
+            key, val = line.split(' = ', maxsplit=1)
+            val = val.strip()
+            parse_param(key, val)
+        else:
+            raise RuntimeError("Unknown param " + line)
     return res
+
+
+def res_checker(res, ans, checker):
+    with open(ans, 'rb') as expected:
+        to_cmp = expected.read()
+    if checker == 'cmp':
+        if to_cmp != res:
+            raise RuntimeError(f"Output missmatched on test {test}. Check \"output\" file")
+    elif checker == 'sorted_lines':
+        if sorted(to_cmp.strip().split('\n')) != sorted(res.strip().split('\n')):
+            raise RuntimeError(f"Output missmatched on test {test}. Check \"output\" file")
+    else:
+        raise RuntimeError("Unknown checker " + checker)
+
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--fill', action='store_true')
 parser.add_argument('--output-file', required=False)
-parser.add_argument('--source-file', required=False, default='solution.c')
+parser.add_argument('--source-file', default='solution.c')
 parser.add_argument('--fix-style', action='store_true')
+parser.add_argument('--checker', default='cmp')
 args = parser.parse_args()
 
 check_style(args.source_file, args.fix_style)
@@ -209,11 +227,11 @@ for test in sorted(Path('tests').glob('*.dat')):
         raise RuntimeError("No answer for test " + test.name)
     res = run_solution(test, meta.get('params', ''), args.output_file, meta.get('environ'))
     if not args.fill:
-        with open(ans, 'rb') as expected:
-            if expected.read() != res:
-                with open('output', 'wb') as f:
-                    f.write(res)
-                raise RuntimeError(f"Output missmatched on test {test}. Check \"output\" file")
+        try:
+            res_checker(res, ans, args.checker)
+        except:
+            with open('output', 'wb') as f:
+                f.write(res)
     else:
         with open(ans, 'wb') as fout:
             fout.write(res)
