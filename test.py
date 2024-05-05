@@ -149,12 +149,14 @@ def check_style(source_file: str, fix: bool):
         raise RuntimeError("Regex check failed")
 
 
-def run_solution(input_file: Path, params: str, output_file: tp.Optional[str],
+def run_solution(input_file: Path, cmd: str, params: str, output_file: tp.Optional[str],
                  env_list: tp.Optional[tp.List[str]]) -> bytes:
     env = ' '.join(env_list) if env_list else ''
     params = params.replace('input.txt', str(input_file.absolute()))
+    cmd = cmd.replace('input.txt', str(input_file.absolute()))
     with open(input_file) as fin:
-        p = subprocess.Popen(f'{env} ./solution {params}'.strip(), stdin=fin, stdout=subprocess.PIPE, shell=True)
+        print(f'{env} {cmd} {params}'.strip())
+        p = subprocess.Popen(f'{env} {cmd} {params}'.strip().split(), stdin=fin, stdout=subprocess.PIPE, shell=False)
         res, _ = p.communicate()
         if p.returncode != 0:
             raise RuntimeError(f'Solution failed with code {p.returncode} on test {input_file}')
@@ -210,6 +212,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--fill', action='store_true')
 parser.add_argument('--output-file', required=False)
 parser.add_argument('--source-file', default='solution.c')
+parser.add_argument('--run-cmd', default='./solution')
 parser.add_argument('--fix-style', action='store_true')
 parser.add_argument('--checker', default='cmp')
 args = parser.parse_args()
@@ -225,13 +228,14 @@ for test in sorted(Path('tests').glob('*.dat')):
             meta = parse_inf_file(f)
     if not ans.is_file() and not args.fill:
         raise RuntimeError("No answer for test " + test.name)
-    res = run_solution(test, meta.get('params', ''), args.output_file, meta.get('environ'))
+    res = run_solution(test, args.run_cmd, meta.get('params', ''), args.output_file, meta.get('environ'))
     if not args.fill:
         try:
             res_checker(res, ans, args.checker)
         except:
             with open('output', 'wb') as f:
                 f.write(res)
+            raise
     else:
         with open(ans, 'wb') as fout:
             fout.write(res)
