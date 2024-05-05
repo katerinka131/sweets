@@ -152,6 +152,7 @@ def check_style(source_file: str, fix: bool):
 def run_solution(input_file: Path, params: str, output_file: tp.Optional[str],
                  env_list: tp.Optional[tp.List[str]]) -> bytes:
     env = ' '.join(env_list) if env_list else ''
+    params = params.replace('input.txt', str(input_file.absolute()))
     with open(input_file) as fin:
         p = subprocess.Popen(f'{env} ./solution {params}'.strip(), stdin=fin, stdout=subprocess.PIPE, shell=True)
         res, _ = p.communicate()

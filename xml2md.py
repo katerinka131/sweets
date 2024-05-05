@@ -3,11 +3,15 @@ import xml.etree.ElementTree as ET
 
 def xml2md(elem: ET.Element):
     if elem.tag == 'p':
-        return elem.text + ''.join(xml2md(inner) for inner in elem) + elem.tail + '\n'
+        return ((elem.text if elem.text else '') +
+                ''.join(xml2md(inner) for inner in elem) +
+                (elem.tail if elem.tail else '') + '\n')
     if elem.tag == 'pre':
-        return '```\n' + ''.join(elem.itertext()) + '\n```' + elem.tail
+        return '```\n' + ''.join(elem.itertext()) + '\n```' + (elem.tail if elem.tail else '')
     if elem.tag == 'b':
-        return '**' + ''.join(elem.itertext()) + '**' + elem.tail
+        return '**' + ''.join(elem.itertext()) + '**' + (elem.tail if elem.tail else '')
+    if elem.tag == 'tt':
+        return '`' + ''.join(elem.itertext()) + '`' + (elem.tail if elem.tail else '')
     raise RuntimeError(f"Unsupported {elem}")
 
 
