@@ -26,6 +26,13 @@ def xml2md(elem: ET.Element, idx=0):
 tree = ET.parse('statement.xml')
 root = tree.getroot()
 with open('README.md', 'w') as f:
+    f.write('### Statement\n\n')
     for elem in root.find('statement').find('description'):
         f.write(xml2md(elem))
         f.write('\n')
+    for example in list(root.find('examples').findall('example')):
+        f.write('### Example\n\n')
+        f.write('Input:\n')
+        f.write(f'```\n{''.join(example.find('input').itertext())}\n```\n\n')
+        f.write('Output:\n')
+        f.write(f'```\n{''.join(example.find('output').itertext())}\n```\n\n')
