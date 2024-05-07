@@ -159,6 +159,7 @@ def run_solution(input_file: Path, cmd: str, params: str, output_file: tp.Option
         p = subprocess.Popen(f'{env} {cmd} {params}'.strip().split(), stdin=fin, stdout=subprocess.PIPE, shell=False)
         res, _ = p.communicate()
         if p.returncode != 0:
+            print(res)
             raise RuntimeError(f'Solution failed with code {p.returncode} on test {input_file}')
     if output_file:
         if res:
@@ -201,7 +202,7 @@ def res_checker(res, ans, checker):
         if to_cmp != res:
             raise RuntimeError(f"Output missmatched on test {test}. Check \"output\" file")
     elif checker == 'sorted_lines':
-        if sorted(to_cmp.strip().split('\n')) != sorted(res.strip().split('\n')):
+        if sorted(to_cmp.strip().split(b'\n')) != sorted(res.strip().split(b'\n')):
             raise RuntimeError(f"Output missmatched on test {test}. Check \"output\" file")
     else:
         raise RuntimeError("Unknown checker " + checker)
