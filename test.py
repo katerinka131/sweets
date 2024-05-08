@@ -149,8 +149,8 @@ def check_style(source_file: str, fix: bool):
         raise RuntimeError("Regex check failed")
 
 
-def run_solution(input_file: Path, cmd: str, params: str, output_file: tp.Optional[str],
-                 env_list: tp.Optional[tp.List[str]]) -> bytes:
+def run_solution(input_file: Path, correct_file: Path, inf_file: Path, cmd: str, params: str,
+                 output_file: tp.Optional[str], env_list: tp.Optional[tp.List[str]], interactor: tp.Optional[str]) -> bytes:
     env = ' '.join(env_list) if env_list else ''
     params = params.replace('input.txt', str(input_file.absolute()))
     cmd = cmd.replace('input.txt', str(input_file.absolute()))
@@ -158,13 +158,29 @@ def run_solution(input_file: Path, cmd: str, params: str, output_file: tp.Option
         cmd = f'{env} {cmd.replace("params", str(params))}'.strip()
     else:
         cmd = f'{env} {cmd} {params}'.strip()
-    with open(input_file) as fin:
-        print(cmd)
-        p = subprocess.Popen(cmd, stdin=fin, stdout=subprocess.PIPE, shell=True)
-        res, _ = p.communicate()
-        if p.returncode != 0:
+    print(cmd)
+    if interactor:
+        p = subprocess.Popen(cmd.split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=False)
+        int_cmd = f'{interactor} {input_file.absolute()} output {correct_file.absolute()} ' \
+                  f'{p.pid} {inf_file.absolute() if inf_file.is_file() else ''}'
+        print(int_cmd)
+        i = subprocess.Popen(int_cmd, stdin=p.stdout, stdout=p.stdin, shell=True)
+        p.stdout.close()
+        p.stdin.close()
+        p.wait()
+        i.wait()
+        with open('output', 'rb') as f:
+            res = f.read()
+        if i.returncode != 0:
             print(res)
-            raise RuntimeError(f'Solution failed with code {p.returncode} on test {input_file}')
+            raise RuntimeError(f'Interactor failed with code {i.returncode} on test {input_file}')
+    else:
+        with open(input_file) as fin:
+            p = subprocess.Popen(cmd, stdin=fin, stdout=subprocess.PIPE, shell=True)
+            res, _ = p.communicate()
+    if p.returncode != 0:
+        print(res)
+        raise RuntimeError(f'Solution failed with code {p.returncode} on test {input_file}')
     if output_file:
         if res:
             raise RuntimeError(f'Unexpected output on test {input_file}')
@@ -222,6 +238,7 @@ parser.add_argument('--source-file', default='solution.c')
 parser.add_argument('--run-cmd', default='./solution')
 parser.add_argument('--fix-style', action='store_true')
 parser.add_argument('--checker', default='cmp')
+parser.add_argument('--interactor', required=False)
 args = parser.parse_args()
 
 check_style(args.source_file, args.fix_style)
@@ -235,7 +252,8 @@ for test in sorted(Path('tests').glob('*.dat')):
             meta = parse_inf_file(f)
     if not ans.is_file() and not args.fill:
         raise RuntimeError("No answer for test " + test.name)
-    res = run_solution(test, args.run_cmd, meta.get('params', ''), args.output_file, meta.get('environ'))
+    res = run_solution(test, ans, inf, args.run_cmd, meta.get('params', ''), args.output_file, meta.get('environ'),
+                       args.interactor)
     if not args.fill:
         try:
             res_checker(res, ans, args.checker)
