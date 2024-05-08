@@ -32,7 +32,7 @@ with open('README.md', 'w') as f:
     for elem in root.find('statement').find('description'):
         f.write(xml2md(elem))
         f.write('\n')
-    if root.find('examples'):
+    if root.find('examples') is not None:
         for example in list(root.find('examples').findall('example')):
             f.write('### Example\n\n')
             f.write('Input:\n')
