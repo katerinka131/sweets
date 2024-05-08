@@ -4,6 +4,7 @@ import subprocess
 import typing as tp
 import os
 import re
+import shlex
 from functools import cache
 from typing import Optional, Tuple
 
@@ -150,31 +151,37 @@ def check_style(source_file: str, fix: bool):
 
 
 def run_solution(input_file: Path, correct_file: Path, inf_file: Path, cmd: str, params: str,
-                 output_file: tp.Optional[str], env_list: tp.Optional[tp.List[str]], interactor: tp.Optional[str]) -> bytes:
-    env = ' '.join(env_list) if env_list else ''
+                 output_file: tp.Optional[str], env_add: tp.Optional[tp.Dict[str, str]],
+                 interactor: tp.Optional[str]) -> bytes:
     params = params.replace('input.txt', str(input_file.absolute()))
     cmd = cmd.replace('input.txt', str(input_file.absolute()))
     if 'params' in cmd:
-        cmd = f'{env} {cmd.replace("params", str(params))}'.strip()
+        cmd = f'{cmd.replace("params", str(params))}'.strip()
     else:
-        cmd = f'{env} {cmd} {params}'.strip()
+        cmd = f'{cmd} {params}'.strip()
     print(cmd)
+    env = os.environ
+    if env_add:
+        env = env.copy()
+        env.update(env_add)
     if interactor:
-        p = subprocess.Popen(cmd.split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=False)
-        int_cmd = f'{interactor} {input_file.absolute()} /dev/stderr {correct_file.absolute()} ' \
-                  f'{p.pid} {inf_file.absolute() if inf_file.is_file() else ''}'
-        print(int_cmd)
-        i = subprocess.Popen(int_cmd, stdin=p.stdout, stdout=p.stdin, shell=True)
+        p = subprocess.Popen(shlex.split(cmd), stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=False, env=env)
+        int_cmd = [interactor, str(input_file.absolute()),
+                   'output', str(correct_file.absolute()),
+                   str(p.pid), str(inf_file.absolute()) if inf_file.is_file() else '']
+        print(shlex.join(int_cmd))
+        i = subprocess.Popen(int_cmd, stdin=p.stdout.fileno(), stdout=p.stdin.fileno(), shell=False, env=env)
         p.stdout.close()
         p.stdin.close()
         p.wait()
         i.wait()
         if i.returncode != 0:
             raise RuntimeError(f'Interactor failed with code {i.returncode} on test {input_file}')
-        res = b''
+        with open('output', 'rb') as f:
+            res = f.read()
     else:
         with open(input_file) as fin:
-            p = subprocess.Popen(cmd, stdin=fin, stdout=subprocess.PIPE, shell=True)
+            p = subprocess.Popen(shlex.split(cmd), stdin=fin, stdout=subprocess.PIPE, shell=False, env=env)
             res, _ = p.communicate()
     if p.returncode != 0:
         print(res)
@@ -197,10 +204,15 @@ def parse_inf_file(f):
                 raise RuntimeError("Duplicated params")
             res[key] = val
         elif key == 'environ':
+            if not key in res:
+                res[key] = {}
+            eq = val.find('=')
+            if not eq:
+                raise RuntimeError("Unsupported env " + str(val))
             if len(val) > 2 and val[0] == '"' == val[-1]:
-                eq = val.find('=')
-                val = val[1:eq + 1] + '"' + val[eq + 1:]
-            res[key] = res.get(key, []) + [val]
+                res[key][val[1: eq]] = val[eq + 1: -1]
+            else:
+                res[key][val[: eq]] = val[eq + 1:]
         elif key == 'comment':
             pass
         else:

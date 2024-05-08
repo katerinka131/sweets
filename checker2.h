@@ -10,8 +10,10 @@
 
 #define checker_drain() ;
 
+#define checker_kill kill
+
 int checker_stoi(const char * str, int base, int *val) {
     char *end = NULL;
     *val = strtol(str, &end, base);
-    return *end != '\0';
+    return *end == '\0';
 }
