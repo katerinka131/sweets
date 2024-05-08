@@ -199,7 +199,10 @@ def parse_inf_file(f):
                 raise RuntimeError("Duplicated params")
             res[key] = val
         elif key == 'environ':
-            res[key] = res.get(key, []).append(val)
+            if len(val) > 2 and val[0] == '"' == val[-1]:
+                eq = val.find('=')
+                val = val[1:eq + 1] + '"' + val[eq + 1:]
+            res[key] = res.get(key, []) + [val]
         elif key == 'comment':
             pass
         else:
