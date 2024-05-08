@@ -20,6 +20,8 @@ def xml2md(elem: ET.Element, idx=0):
         return '**' + ''.join(elem.itertext()) + '**' + (elem.tail if elem.tail else '')
     if elem.tag == 'tt' or elem.tag == 'code':
         return '`' + ''.join(elem.itertext()) + '`' + (elem.tail if elem.tail else '')
+    if elem.tag == 'a':
+        return '[' + ''.join(elem.itertext()) +  '](' + elem.attrib['href'] + ')' + (elem.tail if elem.tail else '')
     raise RuntimeError(f"Unsupported {elem}")
 
 

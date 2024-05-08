@@ -154,9 +154,13 @@ def run_solution(input_file: Path, cmd: str, params: str, output_file: tp.Option
     env = ' '.join(env_list) if env_list else ''
     params = params.replace('input.txt', str(input_file.absolute()))
     cmd = cmd.replace('input.txt', str(input_file.absolute()))
+    if 'params' in cmd:
+        cmd = f'{env} {cmd.replace("params", str(params))}'.strip()
+    else:
+        cmd = f'{env} {cmd} {params}'.strip()
     with open(input_file) as fin:
-        print(f'{env} {cmd} {params}'.strip())
-        p = subprocess.Popen(f'{env} {cmd} {params}'.strip(), stdin=fin, stdout=subprocess.PIPE, shell=True)
+        print(cmd)
+        p = subprocess.Popen(cmd, stdin=fin, stdout=subprocess.PIPE, shell=True)
         res, _ = p.communicate()
         if p.returncode != 0:
             print(res)
@@ -180,6 +184,8 @@ def parse_inf_file(f):
             res[key] = val
         elif key == 'environ':
             res[key] = res.get(key, []).append(val)
+        elif key == 'comment':
+            pass
         else:
             raise RuntimeError(f"Unknown inf param {key} = {val}")
 
