@@ -156,7 +156,7 @@ def run_solution(input_file: Path, cmd: str, params: str, output_file: tp.Option
     cmd = cmd.replace('input.txt', str(input_file.absolute()))
     with open(input_file) as fin:
         print(f'{env} {cmd} {params}'.strip())
-        p = subprocess.Popen(f'{env} {cmd} {params}'.strip().split(), stdin=fin, stdout=subprocess.PIPE, shell=False)
+        p = subprocess.Popen(f'{env} {cmd} {params}'.strip(), stdin=fin, stdout=subprocess.PIPE, shell=True)
         res, _ = p.communicate()
         if p.returncode != 0:
             print(res)
