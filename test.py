@@ -161,7 +161,7 @@ def run_solution(input_file: Path, correct_file: Path, inf_file: Path, cmd: str,
     print(cmd)
     if interactor:
         p = subprocess.Popen(cmd.split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=False)
-        int_cmd = f'{interactor} {input_file.absolute()} output {correct_file.absolute()} ' \
+        int_cmd = f'{interactor} {input_file.absolute()} /dev/stderr {correct_file.absolute()} ' \
                   f'{p.pid} {inf_file.absolute() if inf_file.is_file() else ''}'
         print(int_cmd)
         i = subprocess.Popen(int_cmd, stdin=p.stdout, stdout=p.stdin, shell=True)
@@ -169,11 +169,9 @@ def run_solution(input_file: Path, correct_file: Path, inf_file: Path, cmd: str,
         p.stdin.close()
         p.wait()
         i.wait()
-        with open('output', 'rb') as f:
-            res = f.read()
         if i.returncode != 0:
-            print(res)
             raise RuntimeError(f'Interactor failed with code {i.returncode} on test {input_file}')
+        res = b''
     else:
         with open(input_file) as fin:
             p = subprocess.Popen(cmd, stdin=fin, stdout=subprocess.PIPE, shell=True)
